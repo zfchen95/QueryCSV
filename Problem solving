@@ -2,5 +2,5 @@ High level:
 1. Function overload
 2. Deal with missing data
 3. Convert query to executable command
-4. Preposscessing and store aggregation result
+4. Preposscessing and reuse data
 5. Operands overload
