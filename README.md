@@ -1,2 +1,2 @@
 # CSVReader
-To study how to computer/process data in the form of CSV files, I create this demo. It shows how to use Java and GoLang to read CSV files and retrieve information we want.
+Target in the scenarios that users want to acquire information from CSV files without putting data into a dataset, we developed this python-based software to ask questions over huge amount of data(300 attributes, millions of rows.
