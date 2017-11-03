@@ -55,8 +55,9 @@ def loader(filename):
     return count
 
 
-def average(filename):
-    return
+def average(filename, attr):
+    tmp = sum(filename, attr)
+    return tmp/COUNT
 
 
 def sum(filename, attr):
@@ -81,10 +82,13 @@ def minimum(filename, attr):
     idx = []
     for str in attr:
         idx.append(attrs.index(str))
-    res = np.zeros(len(attr))
+    res = np.empty(len(attr))
+    res.fill(float('inf'))
     for row in reader:
         for i in range(len(attr)):
-            res += float(row[idx[i]])
+            tmp = float(row[idx[i]])
+            if tmp < res[i]:
+                res[i] = tmp
     myFile.close()
     return res
 
@@ -130,10 +134,9 @@ COUNT = loader(filename)
 # select(filename, 'James Harden')
 sql = 'select * from players_stats_2014_2015.csv where id in (select id from bar)'
 print(sp.format(sql, reindent=True, keyword_case='upper'))
-res = sp.parse(sql)
-for str in res:
-    print(str)
 
 print(sum(filename, ['3PM']))
-print(maximum(filename, ['3PM']))
+print(maximum(filename, ['FGM', '3PM', 'FTM']))
 print(find(filename, '3PA', 600))
+print(minimum(filename, ['FG%', '3P%', 'FT%']))
+print(average(filename, ['Games Played']))
