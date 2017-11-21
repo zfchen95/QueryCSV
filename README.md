@@ -38,6 +38,7 @@ Result:
 ------------------------------------
 ['Superman Returns', 'Actor in a Leading Role']
 
+------------------------------------
 Some queries are provided in the 'test_query.py'. 
 
 Feel free to contact me: zc15@illinois.edu, if you have any issue in running the program.
