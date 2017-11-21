@@ -23,20 +23,23 @@ Query syntax
 Example query:
 ------------------------------------
 "SELECT movie_title, title_year, imdb_score FROM movies.csv WHERE ( movie_title LIKE '%Kevin%' AND imdb_score > 7 );
+
 Result:
+------------------------------------
 ['We Need to Talk About Kevin', '2011', '7.5']
 ['Kevin Hart: Laugh at My Pain', '2011', '7.5']
 
 
 Example query 2:
 ------------------------------------
-"SELECT M.movie_title, A.Award FROM movies.csv M, oscars.csv A WHERE A.Name LIKE '%Kevin%' 
-AND A.Winner = 1 AND A.Award = 'Actor in a Leading Role' AND A.Name = M.actor_1_name AND 
-M.title_year > 2000 AND M.budget > M.gross AND M.movie_title LIKE '%Superman%' ;"
+"SELECT M.movie_title, A.Award FROM movies.csv M, oscars.csv A WHERE A.Name LIKE '%Kevin%' AND A.Winner = 1 AND A.Award = 'Actor in a Leading Role' AND A.Name = M.actor_1_name AND M.title_year > 2000 AND M.budget > M.gross AND M.movie_title LIKE '%Superman%' ;"
+
 Result:
+------------------------------------
 ['Superman Returns', 'Actor in a Leading Role']
 
 Some queries are provided in the 'test_query.py'. 
+
 Feel free to contact me: zc15@illinois.edu, if you have any issue in running the program.
 
 Upcoming features
