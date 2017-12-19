@@ -255,12 +255,14 @@ def select(tuples, file_rename, file_map, keyword, cond):
 
 def update_one(tuples, filename, file_index, attr_index, cond, keyword):
     left, right, op = decompose_condition(cond)
+    new_tuples = []
     if op == '=':
         index_file = idx_path + filename.replace(".csv", left + ".npy")
         if exists(index_file):
             print(index_file)
             dict = np.load(index_file).item()
-            new_tuples = dict[right]
+            if right in dict:
+                new_tuples = dict[right]
         else:
             index_file = idx_path + filename.replace(".csv", left + '.pkl')
             print(index_file)
@@ -272,8 +274,8 @@ def update_one(tuples, filename, file_index, attr_index, cond, keyword):
             new_tuples = get_rows(index_file, right, op)
         else:
             print("Index is not found")
+
     if len(tuples[file_index]) == 0:
-        print('hello')
         tuples[file_index] = new_tuples
     elif keyword == 'AND':
         print('intersect')
@@ -290,21 +292,36 @@ def join_two(tuples, file_rename, file_map, keyword, cond):
     file_idx1 = file_rename.index(cond[1][0])
     attr_idx0 = get_index(file_map[cond[0][0]], left)
     attr_idx1 = get_index(file_map[cond[1][0]], right)
-    dict = {}
+    filename1 = file_map[cond[0][0]]
+    filename2 = file_map[cond[1][0]]
     if file_idx0 == file_idx1:
         print('JOIN TWO: There should be two different relation')
     if op == '=':
         if len(tuples[file_idx0]) != 0 and len(tuples[file_idx1]) != 0:
+            print(len(tuples[file_idx0]), len(tuples[file_idx1]))
             if len(tuples[file_idx0]) < len(tuples[file_idx1]):
-                for row in tuples[file_idx0]:
-                    if row[attr_idx0] not in dict:
-                        dict[row[attr_idx0]] = list()
-                    dict[row[attr_idx0]].append(row)
-                for row in tuples[file_idx1]:
-                    if row[attr_idx1] in dict:
-                        for row2 in dict[row[attr_idx1]]:
-                            new_tuples[file_idx0].append(row2)
-                            new_tuples[file_idx1].append(row)
+                dict = {}
+                index_file1 = idx_path + filename1.replace(".csv", left + "idx.npy")
+                index_file2 = idx_path + filename2.replace(".csv", right + "idx.npy")
+                if exists(index_file1):
+                    dict1 = np.load(index_file1).item()
+                else:
+                    print(index_file1, 'not exists')
+                if exists(index_file2):
+                    dict2 = np.load(index_file2).item()
+                else:
+                    print(index_file2, 'not exists')
+
+                for row_num in tuples[file_idx0]:
+                    if dict1[row_num] not in dict:
+                        dict[dict1[row_num]] = list()
+                    dict[dict1[row_num]].append(row_num)
+
+                for row_num2 in tuples[file_idx1]:
+                    if dict2[row_num2] in dict:
+                        for row_num in dict[dict2[row_num2]]:
+                            new_tuples[file_idx0].append(row_num)
+                            new_tuples[file_idx1].append(row_num2)
             else:
                 for row in tuples[file_idx1]:
                     if row[attr_idx1] not in dict:
@@ -316,19 +333,23 @@ def join_two(tuples, file_rename, file_map, keyword, cond):
                             new_tuples[file_idx0].append(row)
                             new_tuples[file_idx1].append(row2)
         elif len(tuples[file_idx0]) != 0 and len(tuples[file_idx1]) == 0:
-            for row in tuples[file_idx0]:
-                if row[attr_idx0] not in dict:
-                    dict[row[attr_idx0]] = list()
-                dict[row[attr_idx0]].append(row)
-            filename = file_map[file_rename[file_idx1]]
-            my_file = open(filename, 'r', encoding='utf8')
-            reader = csv.reader(my_file)
-            for row in reader:
-                if row[attr_idx1] in dict:
-                    for row2 in dict[row[attr_idx1]]:
-                        new_tuples[file_idx0].append(row2)
-                        new_tuples[file_idx1].append(row)
-            my_file.close()
+            print("i am here")
+            index_file1 = idx_path + filename1.replace(".csv", left + "idx.npy")
+            index_file2 = idx_path + filename2.replace(".csv", right + ".npy")
+            if exists(index_file1):
+                dict1 = np.load(index_file1).item()
+            else:
+                print(index_file1, 'not exists')
+            if exists(index_file2):
+                dict2 = np.load(index_file2).item()
+            else:
+                print(index_file2, 'not exists')
+            for row_num in tuples[file_idx0]:
+                if dict1[row_num] in dict2:
+                    for row_num2 in dict2[dict1[row_num]]:
+                        new_tuples[file_idx0].append(row_num)
+                        new_tuples[file_idx1].append(row_num2)
+
         elif len(tuples[file_idx0]) == 0 and len(tuples[file_idx1]) != 0:
             for row in tuples[file_idx1]:
                 if row[attr_idx1] not in dict:
@@ -612,6 +633,12 @@ def merge(tuple1, tuple2, keyword):
 
 
 def generate_map(file):
+    """
+
+    :param file:
+    :return: file map store a hash from 'rename' to real file name
+    file rename store a list of 'rename'
+    """
     file_map = {}
     file_rename = []
     for filename in file:
@@ -635,7 +662,8 @@ def query_one_table(attribute, file, conditions, keyword):
             tmp = update_one(tmp, filename, file_index, attr_index, cond, "")
         print(len(tmp[0]))
         keyword_i += 1
-    res = project(tmp, file_map, file_rename, attribute)
+    # res = project(tmp, file_map, file_rename, attribute)
+    res = tmp
     return res
 
 
@@ -653,6 +681,7 @@ def query_two_table(attribute, file, conditions, keyword):
             else:
                 tmp = select(tmp, file_rename, file_map, keyword[keyword_i], cond)
         keyword_i += 1
+        print(len(tmp[0]), len(tmp[1]))
         while keyword_i < len(keyword) and (keyword[keyword_i] == '(' or keyword[keyword_i] == ')'):
             keyword_i += 1
     try:
@@ -695,10 +724,11 @@ def execute_query(input_query):
 
 
 start = time.time()
-sample_query = "SELECT R.review_id, R.stars, R.useful FROM review.csv R WHERE R.stars >= 4 AND R.useful > 20;"
-# sample_query = "SELECT B.name, B.postal_code, R.review_id, R.stars, R.useful FROM business.csv B, review-5k.csv R " \
+# sample_query = "SELECT R.review_id, R.stars, R.useful FROM review.csv R WHERE R.stars >= 4 AND R.useful > 20;"
+# sample_query = "SELECT B.name, B.postal_code, R.review_id, R.stars, R.useful FROM business.csv B, review.csv R " \
 #                "WHERE B.city = 'Champaign' AND B.state = 'IL' AND B.business_id = R.business_id;"
-
+sample_query = "SELECT B.name, B.postal_code, R.review_id, R.stars, R.useful FROM business.csv B, review.csv R " \
+               "WHERE B.city = 'Champaign' AND B.state = 'IL' AND R.stars = 5 AND B.business_id = R.business_id;"
 query_output = execute_query(sample_query)
 
 end = time.time()

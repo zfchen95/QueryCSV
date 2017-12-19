@@ -32,7 +32,7 @@ def row_operation(tree, num, op):
     elif op == '<=':
         row = list(tree.values(max=num, excludemax=False))
     elif op == '=':
-        row = list(tree[num])
+        row = list(tree.values(min=num, max=num, excludemin=False, excludemax=False))
     elif op == '<>':
         row = list(tree.values(max=num, excludemax=True)) + list(tree.values(min=num, excludemax=True))
     output = [j for i in row for j in i]
