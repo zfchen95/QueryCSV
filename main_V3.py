@@ -211,6 +211,15 @@ def project(tuples, file_map, file_rename, attributes):
 
 
 def select(tuples, file_rename, file_map, keyword, cond):
+    """
+    distribute condition to corresponding function, available to two and three tables
+    :param tuples:
+    :param file_rename:
+    :param file_map:
+    :param keyword:
+    :param cond:
+    :return:
+    """
     if len(cond[0]) == 2 and len(cond[1]) == 2:
         if keyword == '':
             if len(file_rename) == 2:
@@ -259,26 +268,25 @@ def update_one(tuples, filename, file_index, attr_index, cond, keyword):
     if op == '=':
         index_file = idx_path + filename.replace(".csv", left + ".npy")
         if exists(index_file):
-            print(index_file)
             dict = np.load(index_file).item()
             if right in dict:
                 new_tuples = dict[right]
         else:
             index_file = idx_path + filename.replace(".csv", left + '.pkl')
-            print(index_file)
-            new_tuples = get_rows(index_file, right, op)
+            if exists(index_file):
+                new_tuples = get_rows(index_file, right, op)
+            else:
+                print("Index is not found", index_file)
     else:
         index_file = idx_path + filename.replace(".csv", left + '.pkl')
         if exists(index_file):
-            print(index_file)
             new_tuples = get_rows(index_file, right, op)
         else:
-            print("Index is not found")
+            print("Index is not found", index_file)
 
     if len(tuples[file_index]) == 0:
         tuples[file_index] = new_tuples
     elif keyword == 'AND':
-        print('intersect')
         tuples[file_index] = intersect(tuples[file_index], new_tuples)
     elif keyword == 'OR':
         tuples[file_index] = union(tuples[file_index], new_tuples)
@@ -290,13 +298,13 @@ def join_two(tuples, file_rename, file_map, keyword, cond):
     new_tuples = [[], []]
     file_idx0 = file_rename.index(cond[0][0])
     file_idx1 = file_rename.index(cond[1][0])
-    attr_idx0 = get_index(file_map[cond[0][0]], left)
-    attr_idx1 = get_index(file_map[cond[1][0]], right)
     filename1 = file_map[cond[0][0]]
     filename2 = file_map[cond[1][0]]
     if file_idx0 == file_idx1:
         print('JOIN TWO: There should be two different relation')
+    #     Join two tables with equality
     if op == '=':
+        # Both tables has been performed selection
         if len(tuples[file_idx0]) != 0 and len(tuples[file_idx1]) != 0:
             print(len(tuples[file_idx0]), len(tuples[file_idx1]))
             if len(tuples[file_idx0]) < len(tuples[file_idx1]):
@@ -422,23 +430,38 @@ def join_three(tuples, file_rename, file_map, keyword, cond):
     file_idx1 = file_rename.index(cond[1][0])
     attr_idx0 = get_index(file_map[cond[0][0]], left)
     attr_idx1 = get_index(file_map[cond[1][0]], right)
+    filename1 = file_map[cond[0][0]]
+    filename2 = file_map[cond[1][0]]
+    # dict (k, v) -> (attribute, list of row number)
+    # dict3 (k, v) -> same as dict, the one table that not involved in join
+    # dict1 (k, v) -> (row number, attribute)
+    # dict2 (k, v) -> (attribute, list of row number) or (k, v) -> (row number, attribute) (if table 2 was selected)
     dict = {}
+
     if file_idx0 == file_idx1:
         print('JOIN Three: There should be two different relation')
     for i in range(len(file_rename)):
         if i not in [file_idx0, file_idx1]:
             third_table_idx = i
     len3 = len(tuples[third_table_idx])
+    print(len3, len(tuples[file_idx0]), len(tuples[file_idx1]))
     if len3 != 0 and (len3 == len(tuples[file_idx0]) or len3 == len(tuples[file_idx1])):
         dict3 = {}
         if op == '=':
             if len3 == len(tuples[file_idx0]):
+                index_file1 = idx_path + filename1.replace(".csv", left + "idx.npy")
+
+                if exists(index_file1):
+                    dict1 = np.load(index_file1).item()
+                else:
+                    print(index_file1, 'not exists')
+
                 for row, row3 in zip(tuples[file_idx0], tuples[third_table_idx]):
-                    if row[attr_idx0] not in dict:
-                        dict[row[attr_idx0]] = list()
-                        dict3[row[attr_idx0]] = list()
-                    dict[row[attr_idx0]].append(row)
-                    dict3[row[attr_idx0]].append(row3)
+                    if dict1[row] not in dict:
+                        dict[dict1[row]] = list()
+                        dict3[dict1[row]] = list()
+                    dict[dict1[row]].append(row)
+                    dict3[dict1[row]].append(row3)
                 if len(tuples[file_idx1]) == 0:
                     filename = file_map[file_rename[file_idx1]]
                     my_file = open(filename, 'r', encoding='utf8')
@@ -450,10 +473,16 @@ def join_three(tuples, file_rename, file_map, keyword, cond):
                                 new_tuples[file_idx1].append(row)
                                 new_tuples[third_table_idx].append(row3)
                     my_file.close()
+                # Selection has been performed on the third table
                 elif len(tuples[file_idx1]) != 0:
+                    index_file2 = idx_path + filename2.replace(".csv", right + "idx.npy")
+                    if exists(index_file2):
+                        dict2 = np.load(index_file2).item()
+                    else:
+                        print(index_file2, 'not exists')
                     for row in tuples[file_idx1]:
-                        if row[attr_idx1] in dict:
-                            for row2, row3 in zip(dict[row[attr_idx1]], dict3[row[attr_idx1]]):
+                        if dict2[row] in dict:
+                            for row2, row3 in zip(dict[dict2[row]], dict3[dict2[row]]):
                                 new_tuples[file_idx0].append(row2)
                                 new_tuples[file_idx1].append(row)
                                 new_tuples[third_table_idx].append(row3)
@@ -524,6 +553,7 @@ def join_three(tuples, file_rename, file_map, keyword, cond):
                                 new_tuples[file_idx1].append(row2)
                                 new_tuples[third_table_idx].append(row3)
         return new_tuples
+    # join two tables only
     elif len3 != len(tuples[file_idx0]) and len3 != len(tuples[file_idx1]):
         tmp_file_rename = list()
         tmp_file_rename.append(cond[0][0])
@@ -532,10 +562,8 @@ def join_three(tuples, file_rename, file_map, keyword, cond):
         tmp_tuples.append(tuples[file_idx0])
         tmp_tuples.append(tuples[file_idx1])
         tmp_tuples = join_two(tmp_tuples, tmp_file_rename, file_map, keyword, cond)
-        new_tuples[file_idx0] = tmp_tuples[file_idx0]
-        new_tuples[file_idx1] = tmp_tuples[file_idx1]
-        new_tuples[third_table_idx] = tuples[third_table_idx]
-        return new_tuples
+        tuples[file_idx0] = tmp_tuples[0]
+        tuples[file_idx1] = tmp_tuples[1]
     return tuples
 
 
@@ -705,7 +733,9 @@ def query_three_table(attribute, file, conditions, keyword):
         keyword_i += 1
         while keyword_i < len(keyword) and (keyword[keyword_i] == '(' or keyword[keyword_i] == ')'):
             keyword_i += 1
-    res = project(tmp, file_map, file_rename, attribute)
+        print(len(tmp[0]), len(tmp[1]), len(tmp[2]))
+    # res = project(tmp, file_map, file_rename, attribute)
+    res = tmp
     return res
 
 
@@ -724,11 +754,14 @@ def execute_query(input_query):
 
 
 start = time.time()
-# sample_query = "SELECT R.review_id, R.stars, R.useful FROM review.csv R WHERE R.stars >= 4 AND R.useful > 20;"
-# sample_query = "SELECT B.name, B.postal_code, R.review_id, R.stars, R.useful FROM business.csv B, review.csv R " \
-#                "WHERE B.city = 'Champaign' AND B.state = 'IL' AND B.business_id = R.business_id;"
+# sample_query = "SELECT R.review_id, R.stars, R.useful FROM review.csv R WHERE R.stars >= 4 AND R.useful > 20 AND R.funny > 50 AND R.cool > 4;"
 sample_query = "SELECT B.name, B.postal_code, R.review_id, R.stars, R.useful FROM business.csv B, review.csv R " \
-               "WHERE B.city = 'Champaign' AND B.state = 'IL' AND R.stars = 5 AND B.business_id = R.business_id;"
+               "WHERE B.city = 'Champaign' AND B.state = 'IL' AND R.stars < 2 AND B.business_id = R.business_id;"
+# sample_query = "SELECT B.name, B.postal_code, R.review_id, R.stars, R.useful FROM business.csv B, review.csv R " \
+#                "WHERE B.city = 'Champaign' AND B.state = 'IL' AND R.stars = 5 AND B.business_id = R.business_id;"
+
+# sample_query = "SELECT B.name FROM business.csv B, review.csv R, photos.csv P WHERE B.city = 'Champaign' AND " \
+#                "B.state = 'IL' AND R.stars = 5 AND P.label = 'inside' AND B.business_id = R.business_id AND B.business_id = P.business_id;"
 query_output = execute_query(sample_query)
 
 end = time.time()
