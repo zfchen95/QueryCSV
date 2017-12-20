@@ -176,7 +176,7 @@ def sql_preprocess(sql):
                     value.remove('NOT')
                     opt = reverse_not(opt)
                 conds.append(value + [opt])
-    if len(files) > 1 and '(' in keyword and ')' in keyword:
+    if '(' in keyword and ')' in keyword:
         keyword, conds = parentheses(keyword, conds)
     return attribute, files, conds, keyword
 
