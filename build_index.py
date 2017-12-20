@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 from BTrees.OOBTree import OOBTree
 import pickle
-
+import io
 #  Assumption, join on business_id, AND,
 #  load data, sort by index
 #  time to load file:
@@ -53,6 +53,31 @@ def build_index(file_path, filename, idx_path, attr_name, idx_type, multiway):
         BT.update(idx_list)
         with open(idx_path + idx_name, 'wb') as f:
             pickle.dump(BT, f, pickle.HIGHEST_PROTOCOL)
+    elif idx_type == 'Location':
+        f = io.open(file_path + filename, encoding="utf8", newline="\r\n")
+        od = []
+        while 1:
+            od.append(f.tell())
+            line = f.readline()
+            if not line:
+                break
+        new_od = od[0: -1]
+        f.seek(0)
+        reader = csv.reader(f)
+        attr = next(reader)
+        f.close()
+        final_od = []
+        for i in range(len(new_od)):
+            x = new_od[i]
+            f = io.open(file_path + filename, encoding="utf8", newline="\r\n")
+            f.seek(x)
+            reader = csv.reader(f)
+            tmp = next(reader)
+            if len(tmp) == len(attr):
+                final_od.append(x)
+                f.close()
+        idx_name = filename.replace('.csv', 'loc.npy')
+        np.save(idx_path + idx_name, final_od)
 
 
-build_index(file_path, 'checkin.csv', idx_path, 'business_id', 'Hash', True)
+build_index(file_path, 'review.csv', idx_path, '', 'Location', False)
