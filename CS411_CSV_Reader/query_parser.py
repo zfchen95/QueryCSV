@@ -1,6 +1,7 @@
 import sqlparse
 import copy
 import re
+import time
 
 logical_opt = ['AND', 'OR', '(', ')']
 compare_opt = ['>=', '<=', '<>', '>', '<', '=', 'LIKE']
@@ -121,7 +122,14 @@ def parentheses(keyword, conds):
     return newkey, newcond
 
 
-def sql_preprocess(sql):
+def sql_preprocess(query):
+    if 'DISTINCT' in sample_query:
+        dist = True
+        sql = query.replace('DISTINCT','')
+    else:
+        dist = False
+        sql = query
+    
     sql = sqlparse.format(sql)
     stmt = sqlparse.parse(sql)[0]
 
@@ -176,8 +184,16 @@ def sql_preprocess(sql):
                     value.remove('NOT')
                     opt = reverse_not(opt)
                 conds.append(value + [opt])
-    if len(files) > 1 and '(' in keyword and ')' in keyword:
+    if '(' in keyword and ')' in keyword:
         keyword, conds = parentheses(keyword, conds)
-    return attribute, files, conds, keyword
+    return attribute, files, conds, keyword, dist
 
 
+# =============================================================================
+# sample_query = "SELECT R.review_id, R.stars, R.useful FROM review-1m.csv R WHERE R.stars >= 4 AND R.useful > 20;"
+# sample_query = "SELECT B.name, B.postal_code, R.review_id, R.stars, R.useful FROM business.csv B, review-1m.csv R WHERE B.city = 'Champaign' AND B.state = 'IL' AND B.business_id = R.business_id;"
+# sample_query = "SELECT DISTINCT B.name FROM business.csv B, review-1m.csv R, photos.csv P WHERE B.city = 'Champaign' AND B.state = 'IL' AND R.stars = 5 AND P.label = 'inside' AND B.business_id = R.business_id AND B.business_id = P.business_id;"
+# 
+# query_output = sql_preprocess(sample_query)
+# print(query_output)
+# =============================================================================
