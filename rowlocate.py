@@ -19,10 +19,10 @@ def getloc_b_c(fname):
     #print("len(newod)",len(newod))
     return(newod)
     
-def getrow(fname, loclist, num):
+def getrow(fname, num):
     #fname is a string. loclist is the list from getloc, num is the row number to locate
     f = open(fname, "r")
-    f.seek(loclist[num])
+    f.seek(num)
     reader = csv.reader(f)
     res = next(reader)
     f.close()
@@ -68,23 +68,3 @@ def getloc_r_p(fname):
     
     #print("len(finalod)", len(finalod))
     return(finalod)
-
-fname = "business.csv"
-f = open(fname, "r")
-reader = csv.reader(f)
-bcount = 0
-for row in reader:
-    bcount = bcount+1
-    
-print("bcount", bcount)
-f.close()
-
-#flist = getloc_r_p(fname)
-flist = getloc_b_c(fname)
-
-start = time.time()
-ans = getrow(fname,flist,5002)
-print(ans)
-print(time.time()-start)
-
-
