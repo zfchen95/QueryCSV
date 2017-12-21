@@ -375,36 +375,40 @@ def join_two(tuples, file_rename, file_map, keyword, cond):
                             new_tuples[file_idx1].append(row_num)
         # Join after selection on one table
         elif len(tuples[file_idx0]) != 0 and len(tuples[file_idx1]) == 0:
-            index_file1 = idx_path + filename1.replace(".csv", left + "idx.npy")
+            loc_filename = idx_path + filename1.replace('.csv', 'loc.npy')
             index_file2 = idx_path + filename2.replace(".csv", right + ".npy")
-            if exists(index_file1):
-                dict1 = np.load(index_file1).item()
+            if exists(loc_filename):
+                location_list = np.load(loc_filename).item()
             else:
-                print(index_file1, 'not exists')
+                print(loc_filename, 'not exists')
             if exists(index_file2):
                 dict2 = np.load(index_file2).item()
             else:
                 print(index_file2, 'not exists')
+            attr_pos = get_index(idx_path + filename1.replace(".csv", "tag.npy"), left)
             for row_num in tuples[file_idx0]:
-                if dict1[row_num] in dict2:
-                    for row_num2 in dict2[dict1[row_num]]:
+                left_attr = getrow(file_path + filename2, location_list[row_num] + 1)[attr_pos]
+                if left_attr in dict2:
+                    for row_num2 in dict2[left_attr]:
                         new_tuples[file_idx0].append(row_num)
                         new_tuples[file_idx1].append(row_num2)
         # Join after selection on one table
         elif len(tuples[file_idx0]) == 0 and len(tuples[file_idx1]) != 0:
             index_file1 = idx_path + filename1.replace(".csv", left + ".npy")
-            index_file2 = idx_path + filename2.replace(".csv", right + "idx.npy")
+            loc_filename = idx_path + filename2.replace('.csv', 'loc.npy')
             if exists(index_file1):
                 dict1 = np.load(index_file1).item()
             else:
                 print(index_file1, 'not exists')
-            if exists(index_file2):
-                dict2 = np.load(index_file2).item()
+            if exists(loc_filename):
+                location_list = np.load(loc_filename)
             else:
-                print(index_file2, 'not exists')
+                print(loc_filename, 'not exists')
+            attr_pos = get_index(idx_path + filename2.replace(".csv", "tag.npy"), right)
             for row_num in tuples[file_idx1]:
-                if dict2[row_num] in dict1:
-                    for row_num2 in dict1[dict2[row_num]]:
+                right_attr = getrow(file_path + filename2, location_list[row_num] + 1)[attr_pos]
+                if right_attr in dict1:
+                    for row_num2 in dict1[right_attr]:
                         new_tuples[file_idx0].append(row_num2)
                         new_tuples[file_idx1].append(row_num)
         # Join without selection
@@ -449,21 +453,37 @@ def join_three(tuples, file_rename, file_map, keyword, cond):
         if op == '=':
             # one table has been joined with the third table
             if len3 == len(tuples[file_idx0]):
-                index_file1 = idx_path + filename1.replace(".csv", left + "idx.npy")
-                if exists(index_file1):
-                    dict1 = np.load(index_file1).item()
+                loc_filename = idx_path + filename2.replace('.csv', 'loc.npy')
+                if exists(loc_filename):
+                    location_list = np.load(loc_filename)
                 else:
-                    print(index_file1, 'not exists')
+                    print(loc_filename, 'not exists')
+                attr_pos = get_index(idx_path + filename2.replace(".csv", "tag.npy"), right)
+                dict2 = {}
+                for row_num in tuples[file_idx1]:
+                    right_attr = getrow(file_path + filename2, location_list[row_num] + 1)[attr_pos]
+                    if right_attr not in dict2:
+                        dict2[right_attr] = list()
+                    dict2[right_attr].append(row_num)
+
+                loc_filename = idx_path + filename1.replace('.csv', 'loc.npy')
+                if exists(loc_filename):
+                    location_list = np.load(loc_filename)
+                else:
+                    print(loc_filename, 'not exists')
+                attr_pos = get_index(idx_path + filename1.replace(".csv", "tag.npy"), left)
+
                 for row, row3 in zip(tuples[file_idx0], tuples[third_table_idx]):
-                    if dict1[row] not in dict:
-                        dict[dict1[row]] = list()
-                        dict3[dict1[row]] = list()
-                    dict[dict1[row]].append(row)
-                    dict3[dict1[row]].append(row3)
+                    left_attr = getrow(file_path + filename1, location_list[row] + 1)[attr_pos]
+                    if left_attr in dict2:
+                        for row2 in dict2[left_attr]:
+                            new_tuples[file_idx0].append(row)
+                            new_tuples[file_idx1].append(row2)
+                            new_tuples[third_table_idx].append(row3)
                 if len(tuples[file_idx1]) == 0:
                     index_file2 = idx_path + filename2.replace(".csv", right + ".npy")
                     if exists(index_file2):
-                        dict2 = np.load(index_file2).item()
+                        dict2 = np.load(index_file2)
                     else:
                         print(index_file2, 'not exists')
                     for attr in dict:
@@ -473,19 +493,6 @@ def join_three(tuples, file_rename, file_map, keyword, cond):
                                     new_tuples[file_idx0].append(row2)
                                     new_tuples[file_idx1].append(row)
                                     new_tuples[third_table_idx].append(row3)
-                # Selection has been performed on the third table
-                elif len(tuples[file_idx1]) != 0:
-                    index_file2 = idx_path + filename2.replace(".csv", right + "idx.npy")
-                    if exists(index_file2):
-                        dict2 = np.load(index_file2).item()
-                    else:
-                        print(index_file2, 'not exists')
-                    for row in tuples[file_idx1]:
-                        if dict2[row] in dict:
-                            for row2, row3 in zip(dict[dict2[row]], dict3[dict2[row]]):
-                                new_tuples[file_idx0].append(row2)
-                                new_tuples[file_idx1].append(row)
-                                new_tuples[third_table_idx].append(row3)
             elif len3 == len(tuples[file_idx1]):
                 index_file2 = idx_path + filename2.replace(".csv", right + "idx.npy")
                 if exists(index_file2):
@@ -747,8 +754,6 @@ def query_two_table(attribute, file, conditions, keyword, DISTINCT):
                 tmp = select(tmp, file_rename, file_map, keyword[keyword_i], cond)
         keyword_i += 1
         print(len(tmp[0]), len(tmp[1]))
-        while keyword_i < len(keyword) and (keyword[keyword_i] == '(' or keyword[keyword_i] == ')'):
-            keyword_i += 1
     try:
         res = project(tmp, file_map, file_rename, attribute)
     except:
@@ -762,20 +767,21 @@ def query_three_table(attribute, file, conditions, keyword, DISTINCT):
     file_map, file_rename = generate_map(file)
     keyword_i = -1
     conditions = reorder_condition(file_map, conditions, keyword)
-    print(conditions)
     for cond in conditions:
+        start = time.time()
         if keyword_i == -1:
             tmp = select(tmp, file_rename, file_map, '', cond)
         else:
             tmp = select(tmp, file_rename, file_map, keyword[keyword_i], cond)
         keyword_i += 1
-        while keyword_i < len(keyword) and (keyword[keyword_i] == '(' or keyword[keyword_i] == ')'):
-            keyword_i += 1
         print(len(tmp[0]), len(tmp[1]), len(tmp[2]))
+        print(cond, time.time() - start)
+    start = time.time()
     try:
         res = project(tmp, file_map, file_rename, attribute)
     except:
         res = tmp
+    print('Projection', time.time() - start)
     return res
 
 
@@ -795,7 +801,13 @@ def execute_query(input_query):
 
 start = time.time()
 sample_query = "SELECT B.name, R1.user_id, R2.user_id FROM business.csv B, review.csv R1, review.csv R2 WHERE B.business_id = R1.business_id AND R1.business_id = R2.business_id AND R1.stars = 5 AND R2.stars = 1 AND R1.useful > 50 AND R2.useful > 50;"
-
+# sample_query = "SELECT R.review_id, R.funny, R.useful FROM review.csv R WHERE R.funny >= 20 AND R.useful > 30;"
+# sample_query = "SELECT B.name, B.city, B.state FROM business.csv B WHERE B.city = 'Champaign' AND B.state = 'IL';"
+# sample_query = "SELECT B.name, B.postal_code, R.stars, R.useful FROM business.csv B, review.csv R WHERE B.business_id = R.business_id AND B.name = 'Sushi Ichiban' AND B.postal_code = 61820;"
+# sample_query = "SELECT R1.user_id, R2.user_id, R1.stars, R2.stars FROM review.csv R1, review.csv R2 WHERE R1.stars = 5 AND R2.stars = 1 AND R1.useful > 50 AND R2.useful > 50 AND R1.business_id = R2.business_id;"
+# sample_query = "SELECT B.name, B.city, B.state, R.stars, P.label FROM business.csv B, review.csv R,photos.csv P WHERE B.business_id = R.business_id AND B.business_id = P.business_id AND B.city = 'Champaign' AND B.state = 'IL' AND R.stars = 5 AND P.label = 'inside';"
+# sample_query = "SELECT B.name, R1.user_id, R2.user_id FROM business.csv B, review.csv R1, review.csv R2 WHERE B.business_id = R1.business_id AND R1.business_id = R2.business_id AND R1.stars = 5 AND R2.stars = 1 AND R1.useful > 50 AND R2.useful > 50;"
 query_output = execute_query(sample_query)
 end = time.time()
 print(end - start)
+print(query_output)
