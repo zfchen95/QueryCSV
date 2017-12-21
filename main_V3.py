@@ -6,17 +6,13 @@ import numpy as np
 import time
 from btree_search import get_rows
 from os.path import exists
-import os
 from rowlocate import getrow
-
-file_path = os.getcwd().replace('\\','/')
-idx_path = file_path+'/index/'
-
+file_path = 'C:/2017_Fall/CS 411/csv_data/'
+idx_path = file_path + 'index/'
 locallst_map = {'business.csv':idx_path+'businessloc.npy',
                 'review.csv':idx_path+'reviewloc.npy',
                 'photos.csv':idx_path+'photosloc.npy',
                 'checkin.csv':idx_path+'checkinloc.npy'}
-
 
 def is_number(s):
     try:
@@ -197,67 +193,31 @@ def union(a, b):
     return list(set(a) | set(b))
 
 
-def projection(before_pro, file, attributes):
-	table_num = len(file) #how many files
-	pro_size = len(before_pro[0])  #size of found index from one file
-
-####################################################################
-	attri_dict = {} #to merge all attri by filename
-
-	for name_attri in attributes:
-		#print(name_attri)
-		if name_attri[0] not in attri_dict:
-			attri_dict[name_attri[0]] = list()
-		attri_dict[name_attri[0]].append(name_attri[1])
-		#print(attri_dict[name_attri[0]])
-####################################################################
-	file_dict_attri_idx_lst = {}
-	print('fffffff',attri_dict)
-
-	for i in range(table_num):
-		filename = file[i][0]
-		if filename in attri_dict:
-			print('filename:', filename)
-			attri_lst = attri_dict[filename]
-			fname = idx_path + filename.replace(".csv", "tag.npy")
-			#print(fname)
-			#print(attri_lst)
-		#print(filename)
-		print('aaa',attri_lst)
-		for entry in attri_lst:
-			#print(entry)
-			attri_idx = get_index(fname, entry)
-			if filename not in file_dict_attri_idx_lst:
-				file_dict_attri_idx_lst[filename] = list()
-			print(file_dict_attri_idx_lst)
-			file_dict_attri_idx_lst[filename].append(attri_idx)
-	print(file_dict_attri_idx_lst)
-	#a dict of k = file.csv, v = list of attribute idx
-####################################################################
-	output_list = list()
-
-	for i in range(pro_size):
-		temp = list()
-		for j in range(table_num):
-			this_row = list() #store one row
-			row_number = before_pro[j][i]
-			filename = file[j][0]
-			locallist = file[j][1]
-			#print('row:',row_number)
-			#print('size',len(locallist))
-			#print('filename:', filename)
-			this_row = getrow(filename, locallist, row_number+1)
-			#invoke get_index() to get attribute index
-			idx_lst = file_dict_attri_idx_lst[filename]
-			#print(idx_lst)
-			#print('5555555555:',this_row[5])
-			for entry in idx_lst:
-				#print(entry)
-
-				temp.append(this_row[entry])
-		output_list.append(temp)
-	print(len(output_list))
-	return output_list
+def project(tuples, file_map, file_rename, attributes):
+    file_dict_attr_idx_lst = {}
+    for attr in attributes:
+        if attr[0] not in file_dict_attr_idx_lst:
+            file_dict_attr_idx_lst[attr[0]] = list()
+        file_dict_attr_idx_lst[attr[0]].append(get_index(idx_path + file_map[attr[0]].replace(".csv", "tag.npy"), attr[1]))
+    location_list = {}
+    for file_abbr in file_dict_attr_idx_lst:
+        location_list[file_abbr] = np.load(idx_path + file_map[file_abbr].replace('.csv', 'loc.npy'))
+    tmp_file_map = {}
+    for file_abbr in file_dict_attr_idx_lst:
+        tmp_file_map[file_abbr] = file_path + file_map[file_abbr]
+    output_list = list()
+    for i in range(len(tuples[0])):
+        temp = list()
+        for file_abbr in file_dict_attr_idx_lst:
+            row_number = tuples[file_rename.index(file_abbr)][i]
+            filename = tmp_file_map[file_abbr]
+            row_location = location_list[file_abbr][row_number + 1]
+            this_row = getrow(filename, row_location)
+            idx_lst = file_dict_attr_idx_lst[file_abbr]
+            for entry in idx_lst:
+                temp.append(this_row[entry])
+        output_list.append(temp)
+    return output_list
 
 
 def select(tuples, file_rename, file_map, keyword, cond):
@@ -280,7 +240,6 @@ def select(tuples, file_rename, file_map, keyword, cond):
                 else:
                     return join_two(tuples, file_rename, file_map, keyword, cond)
         elif keyword == 'AND':
-
             if len(file_rename) == 2:
                 # Join after join, or selection by comparing two attribute in one table
                 if len(tuples[0]) == len(tuples[1]) or cond[0][0] == cond[1][0]:
@@ -646,9 +605,9 @@ def select_two(tuples, file_rename, file_map, keyword, cond):
                     new_tuple.append(row)
             tuples[file_idx0] = new_tuple
             return tuples
-        elif  len(tuples[0]) == len(tuples[1]):
+        elif len(tuples[0]) == len(tuples[1]):
             new_tuple = [[], []]
-            for row in tuples[file_idx0]:
+            for i, row in enumerate(tuples[file_idx0]):
                 if get_truth(dict1[row], dict2[row], op):
                     new_tuple[file_idx0].append(tuples[file_idx0][i])
                     new_tuple[1 - file_idx0].append(tuples[1 - file_idx0][i])
@@ -663,14 +622,24 @@ def select_three(tuples, file_rename, file_map, keyword, cond):
     left, right, op = decompose_condition(cond)
     file_idx0 = file_rename.index(cond[0][0])
     file_idx1 = file_rename.index(cond[1][0])
-    attr_idx0 = get_index(file_map[cond[0][0]], left)
-    attr_idx1 = get_index(file_map[cond[1][0]], right)
+    filename1 = file_map[cond[0][0]]
+    filename2 = file_map[cond[1][0]]
     if len(tuples[file_idx0]) == 0 and len(tuples[file_idx1]) == 0:
         print("SELECT THREE: both tuples are empty")
         return tuples
     if cond[0][0] == cond[1][0]:
         pass
     else:
+        index_file1 = idx_path + filename1.replace(".csv", left + "idx.npy")
+        index_file2 = idx_path + filename2.replace(".csv", right + "idx.npy")
+        if exists(index_file1):
+            dict1 = np.load(index_file1).item()
+        else:
+            print(index_file1, 'not exists')
+        if exists(index_file2):
+            dict2 = np.load(index_file2).item()
+        else:
+            print(index_file2, 'not exists')
         new_tuples = list()
         for i in range(len(file_rename)):
             new_tuples.append([])
@@ -679,13 +648,13 @@ def select_three(tuples, file_rename, file_map, keyword, cond):
                 third_table_idx = i
         if len(tuples[third_table_idx]) == len(tuples[file_idx0]):
             for i in range(len(tuples[file_idx0])):
-                if get_truth(new_tuples[file_idx0][i][attr_idx0], new_tuples[file_idx1][i][attr_idx1], op):
+                if get_truth(dict1[tuples[file_idx0][i]], dict2[tuples[file_idx1][i]], op):
                     new_tuples[file_idx0].append(tuples[file_idx0][i])
                     new_tuples[file_idx1].append(tuples[file_idx1][i])
                     new_tuples[third_table_idx].append(tuples[third_table_idx][i])
         else:
             for i in range(len(tuples[file_idx0])):
-                if get_truth(new_tuples[file_idx0][i][attr_idx0], new_tuples[file_idx1][i][attr_idx1], op):
+                if get_truth(dict1[tuples[file_idx0][i]], dict2[tuples[file_idx1][i]], op):
                     new_tuples[file_idx0].append(tuples[file_idx0][i])
                     new_tuples[file_idx1].append(tuples[file_idx1][i])
             new_tuples[third_table_idx] = tuples[third_table_idx]
@@ -718,6 +687,7 @@ def merge(tuple1, tuple2, keyword):
 
 def generate_map(file):
     """
+
     :param file:
     :return: file map store a hash from 'rename' to real file name
     file rename store a list of 'rename'
@@ -745,11 +715,10 @@ def query_one_table(attribute, file, conditions, keyword, DISTINCT):
         print(len(tmp[0]))
         keyword_i += 1
     try:
-        #res = projection(tmp,file,attributes)
         res = project(tmp, file_map, file_rename, attribute)
     except:
         print('Tuples rows does not match')
-        res = list()
+        res = tmp
     return res
 
 
@@ -774,7 +743,7 @@ def query_two_table(attribute, file, conditions, keyword, DISTINCT):
         res = project(tmp, file_map, file_rename, attribute)
     except:
         print('Tuples rows does not match')
-        print(tmp)
+        res = tmp
     return res
 
 
@@ -783,6 +752,7 @@ def query_three_table(attribute, file, conditions, keyword, DISTINCT):
     file_map, file_rename = generate_map(file)
     keyword_i = -1
     conditions = reorder_condition(file_map, conditions, keyword)
+    print(conditions)
     for cond in conditions:
         if keyword_i == -1:
             tmp = select(tmp, file_rename, file_map, '', cond)
@@ -792,20 +762,10 @@ def query_three_table(attribute, file, conditions, keyword, DISTINCT):
         while keyword_i < len(keyword) and (keyword[keyword_i] == '(' or keyword[keyword_i] == ')'):
             keyword_i += 1
         print(len(tmp[0]), len(tmp[1]), len(tmp[2]))
-    #res = project(tmp, file_map, file_rename, attribute)
-    #print('a:',attribute, 'f:',file, 'c:',conditions, 'k:',keyword)
-
-    attributes = []
-    for att in attribute:
-        file_disk_name = file_map[att[0]]
-        attributes.append([file_disk_name,att[1]])
-    #print(attributes)
-    idx_file = []
-    for f in file:
-        idx_file.append([f[0], locallst_map[f[0]]])
-    #print(idx_file)
-    res = projection(tmp, idx_file, attributes)
-    #print(tmp)
+    try:
+        res = project(tmp, file_map, file_rename, attribute)
+    except:
+        res = tmp
     return res
 
 
@@ -824,22 +784,22 @@ def execute_query(input_query):
 
 
 start = time.time()
-sample_query = "SELECT R.review_id, R.stars, R.useful FROM review.csv R WHERE R.useful > 80 AND R.stars = 5 AND R.funny > 30;"
+# sample_query = "SELECT R.review_id, R.stars, R.useful FROM review.csv R WHERE R.useful > 80 AND R.stars = 5 AND R.funny > 30;"
 # sample_query = "SELECT B.name, B.postal_code, R.review_id, R.stars, R.useful FROM business.csv B, review.csv R " \
 #                "WHERE B.city = 'Champaign' AND B. state = 'IL' AND B.business_id = R.business_id;"
 # sample_query = "SELECT B.name, B.postal_code, R.review_id, R.stars, R.useful FROM business.csv B, review.csv R " \
 #                "WHERE B.city = 'Champaign' AND B.state = 'IL' AND R.stars = 5 AND B.business_id = R.business_id;"
 
 # sample_query = "SELECT B.name FROM business.csv B, review.csv R, photos.csv P WHERE B.city = 'Champaign' AND " \
-#                "B.state = 'IL' AND R.stars = 5 AND P.label = 'inside' AND B.business_id = R.business_id AND B.business_id = P.business_id;"
+#                "B.state = 'IL' AND R.stars = 5 AND P.label = 'inside' AND B.business_id = R.business_id AND B.business_id = P.business_id AND R.stars = 5 AND P.label = 'inside' AND B.business_id = R.business_id AND B.business_id = P.business_id;"
 # sample_query = "SELECT B.name FROM  photos.csv P, review.csv R,  business.csv B   WHERE " \
 #                "B.city = 'Champaign' AND R.useful > 10 AND P.label = 'inside' AND B.business_id = R.business_id AND B.business_id = P.business_id;"
 # test_query = "SELECT B.name, B.postal_code, R.review_id, R.stars, R.useful FROM business.csv B, review.csv R " \
 #                "WHERE B.city = 'Champaign' AND B.state = 'IL' AND R.stars <> 0 AND B.attributes_DogsAllowed = True AND B.business_id = R.business_id;"
-#test_query = "SELECT B.name FROM business.csv B, review.csv R WHERE B.city = 'Champaign' AND B.state = 'IL' AND " \
-#             "( R.funny > 50 OR R.useful > 50 ) AND B.business_id = R.business_id;"
-sample_query = "SELECT B.name, R.name FROM business.csv B, review.csv R, photos.csv P WHERE B.city = 'Champaign' AND " \
-               "B.state = 'IL' AND R.stars = 5 AND P.label = 'inside' AND B.business_id = R.business_id AND B.business_id = P.business_id;"
+# test_query = "SELECT B.name FROM business.csv B, review.csv R WHERE B.city = 'Champaign' AND B.state = 'IL' AND " \
+#              "( R.funny > 50 OR R.useful > 50 ) AND B.business_id = R.business_id;"
+sample_query = "SELECT B.name, R1.user_id, R2.user_id FROM business.csv B, review.csv R1, review.csv R2 " \
+               "WHERE B.business_id = R1.business_id AND R1.business_id = R2.business_id AND R1.stars = 5 AND R2.stars = 1 AND R1.useful > 50 AND R2.useful > 50;;"
 query_output = execute_query(sample_query)
 end = time.time()
 print(end - start)
