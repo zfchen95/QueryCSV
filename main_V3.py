@@ -212,8 +212,6 @@ def project(tuples, file_map, file_rename, attributes):
     for file_abbr in file_dict_attr_idx_lst:
         tmp_file_map[file_abbr] = file_path + file_map[file_abbr]
     output_list = list()
-    print(file_dict_attr_idx_lst, tmp_file_map)
-    print(tuples)
     for i in range(len(tuples[0])):
         temp = list()
         for file_abbr in file_dict_attr_idx_lst:
@@ -336,10 +334,9 @@ def join_two(tuples, file_rename, file_map, keyword, cond):
     if op == '=':
         # Join after selection on two tables
         if len(tuples[file_idx0]) != 0 and len(tuples[file_idx1]) != 0:
-            if len(tuples[file_idx0]) > 100 or len(tuples[file_idx1]) > 100:
+            if len(tuples[file_idx0]) < 100 or len(tuples[file_idx1]) > 100:
                 index_file1 = idx_path + filename1.replace(".csv", left + "idx.npy")
                 index_file2 = idx_path + filename2.replace(".csv", right + "idx.npy")
-                start = time.time()
                 if exists(index_file1):
                     dict1 = np.load(index_file1).item()
                 else:
@@ -348,7 +345,6 @@ def join_two(tuples, file_rename, file_map, keyword, cond):
                     dict2 = np.load(index_file2).item()
                 else:
                     print(index_file2, 'not exists')
-                print("join:", time.time() - start)
                 dict = {}
                 # build hash map on the table with fewer records
                 if len(tuples[file_idx0]) < len(tuples[file_idx1]):
@@ -430,7 +426,6 @@ def join_two(tuples, file_rename, file_map, keyword, cond):
                 attr_pos = get_index(idx_path + filename1.replace(".csv", "tag.npy"), left)
                 for row_num in tuples[file_idx0]:
                     left_attr = getrow(file_path + filename1, location_list[row_num + 1])[attr_pos]
-                    # print(dict2[left_attr])
                     if left_attr in dict2:
                         for row_num2 in dict2[left_attr]:
                             new_tuples[file_idx0].append(row_num)
@@ -815,7 +810,7 @@ def query_one_table(attribute, file, conditions, keyword, DISTINCT):
             tmp = update_one(tmp, filename, file_index, cond, keyword[keyword_i])
         else:
             tmp = update_one(tmp, filename, file_index, cond, "")
-        print(len(tmp[0]))
+        # print(len(tmp[0]))
         keyword_i += 1
     try:
         res = project(tmp, file_map, file_rename, attribute)
@@ -841,7 +836,7 @@ def query_two_table(attribute, file, conditions, keyword, DISTINCT):
             else:
                 tmp = select(tmp, file_rename, file_map, keyword[keyword_i], cond)
         keyword_i += 1
-        print(len(tmp[0]), len(tmp[1]))
+        # print(len(tmp[0]), len(tmp[1]))
     try:
         res = project(tmp, file_map, file_rename, attribute)
     except:
@@ -858,20 +853,20 @@ def query_three_table(attribute, file, conditions, keyword, DISTINCT):
     keyword_i = -1
     conditions = reorder_condition(file_map, conditions, keyword)
     for cond in conditions:
-        start = time.time()
+        # start = time.time()
         if keyword_i == -1:
             tmp = select(tmp, file_rename, file_map, '', cond)
         else:
             tmp = select(tmp, file_rename, file_map, keyword[keyword_i], cond)
         keyword_i += 1
-        print(len(tmp[0]), len(tmp[1]), len(tmp[2]))
-        print(cond, time.time() - start)
+        # print(len(tmp[0]), len(tmp[1]), len(tmp[2]))
+        # print(cond, time.time() - start)
     start = time.time()
     try:
         res = project(tmp, file_map, file_rename, attribute)
     except:
         res = tmp
-    print('Projection', time.time() - start)
+    # print('Projection', time.time() - start)
     if DISTINCT == True:
         res = [list(t) for t in set(map(tuple, res))]
     return res
@@ -879,10 +874,10 @@ def query_three_table(attribute, file, conditions, keyword, DISTINCT):
 
 def execute_query(input_query):
     attribute, file, conditions, keyword, DISTINCT = parse.sql_preprocess(input_query)
-    print('SELECT:', attribute)
-    print('FROM:', file)
-    print('WHERE conditions:', conditions)
-    print('WHERE KEY:', keyword)
+    # print('SELECT:', attribute)
+    # print('FROM:', file)
+    # print('WHERE conditions:', conditions)
+    # print('WHERE KEY:', keyword)
     if len(file) == 1:
         return query_one_table(attribute, file, conditions, keyword, DISTINCT)
     elif len(file) == 2:
@@ -891,14 +886,10 @@ def execute_query(input_query):
         return query_three_table(attribute, file, conditions, keyword, DISTINCT)
 
 
-start = time.time()
-# sample_query = "SELECT R.review_id, R.funny, R.useful FROM review.csv R WHERE R.funny >= 20 AND R.useful > 30;"
-# sample_query = "SELECT B.name, B.city, B.state FROM business.csv B WHERE B.city = 'Champaign' AND B.state = 'IL';"
-# sample_query = "SELECT B.name, B.postal_code, R.stars, R.useful FROM business.csv B, review.csv R WHERE B.business_id = R.business_id AND B.name = 'Sushi Ichiban' AND B.postal_code = 61820;"
-sample_query = "SELECT R1.user_id, R2.user_id, R1.stars, R2.stars FROM review.csv R1, review.csv R2 WHERE R1.stars = 5 AND R2.stars = 1 AND R1.useful > 50 AND R2.useful > 50 AND R1.business_id = R2.business_id;"
-# sample_query = "SELECT B.name, B.city, B.state, R.stars, P.label FROM business.csv B, review.csv R,photos.csv P WHERE B.business_id = R.business_id AND B.business_id = P.business_id AND B.city = 'Champaign' AND B.state = 'IL' AND R.stars = 5 AND P.label = 'inside';"
-# sample_query = "SELECT B.name, R1.user_id, R2.user_id, R2.stars, R1.stars FROM business.csv B, review.csv R1, review.csv R2 WHERE B.business_id = R1.business_id AND R1.business_id = R2.business_id AND R1.stars = 5 AND R2.stars = 1 AND R1.useful > 50 AND R2.useful > 50;"
-query_output = execute_query(sample_query)
-end = time.time()
-print(end - start)
-print(query_output)
+# start = time.time()
+# sample_query = "SELECT B.name, B.postal_code, R.review_id, R.stars, R.useful FROM business.csv B, review.csv R " \
+#                "WHERE B.city = 'Champaign' AND B.state = 'IL' AND B.business_id = R.business_id;"
+# query_output = execute_query(sample_query)
+# end = time.time()
+# print('Run time:', end - start)
+# print('Length of output', len(query_output))
