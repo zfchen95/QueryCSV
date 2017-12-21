@@ -6,8 +6,17 @@ import numpy as np
 import time
 from btree_search import get_rows
 from os.path import exists
-file_path = 'C:/2017_Fall/CS 411/csv_data/'
-idx_path = 'C:/2017_Fall/CS 411/csv_data/index/'
+import os
+from rowlocate import getrow
+
+file_path = os.getcwd().replace('\\','/')
+idx_path = file_path+'/index/'
+
+locallst_map = {'business.csv':idx_path+'businessloc.npy',
+                'review.csv':idx_path+'reviewloc.npy',
+                'photos.csv':idx_path+'photosloc.npy',
+                'checkin.csv':idx_path+'checkinloc.npy'}
+
 
 def is_number(s):
     try:
@@ -188,24 +197,65 @@ def union(a, b):
     return list(set(a) | set(b))
 
 
-def project(tuples, file_map, file_rename, attributes):
-    if attributes[0][0] == '*':
-        res = list()
-        for i in range(len(tuples[0])):
-            tmp = list()
-            for file_idx in range(len(file_rename)):
-                tmp.append(tuples[file_idx][i])
-            res.append(tmp)
-    else:
-        res = list()
-        file_idx = [file_rename.index(attribute[0]) for attribute in attributes]
-        attr_idx = [get_index(file_map[attribute[0]], attribute[1].lower()) for attribute in attributes]
-        for i in range(len(tuples[0])):
-            tmp = list()
-            for j in range(len(attr_idx)):
-                tmp.append(tuples[file_idx[j]][i][attr_idx[j]])
-            res.append(tmp)
-    return res
+def projection(before_pro, file, attributes):
+	table_num = len(file) #how many files
+	pro_size = len(before_pro[0])  #size of found index from one file
+
+####################################################################
+	attri_dict = {} #to merge all attri by filename
+
+	for name_attri in attributes:
+		#print(name_attri)
+		if name_attri[0] not in attri_dict:
+			attri_dict[name_attri[0]] = list()
+		attri_dict[name_attri[0]].append(name_attri[1])
+		#print(attri_dict[name_attri[0]])
+####################################################################
+	file_dict_attri_idx_lst = {}
+	print('fffffff',attri_dict)
+
+	for i in range(table_num):
+		filename = file[i][0]
+		print('filename:', filename)
+		if filename in attri_dict:
+			attri_lst = attri_dict[filename]
+		fname = idx_path + filename.replace(".csv", "tag.npy")
+		#print(fname)
+		#print(attri_lst)
+		for entry in attri_lst:
+			#print(entry)
+			attri_idx = get_index(fname, entry)
+			if filename not in file_dict_attri_idx_lst:
+				#print(attri_idx)
+				file_dict_attri_idx_lst[filename] = list()
+			file_dict_attri_idx_lst[filename].append(attri_idx)
+	#print(file_dict_attri_idx_lst)
+	#a dict of k = file.csv, v = list of attribute idx
+####################################################################
+	output_list = list()
+
+	for i in range(pro_size):
+		temp = list()
+		for j in range(table_num):
+			this_row = list() #store one row
+			row_number = before_pro[j][i]
+			filename = file[j][0]
+			locallist = file[j][1]
+			#print('row:',row_number)
+			#print('size',len(locallist))
+			#print('filename:', filename)
+			this_row = getrow(filename, locallist, row_number+1)
+			#invoke get_index() to get attribute index
+			idx_lst = file_dict_attri_idx_lst[filename]
+			#print(idx_lst)
+			#print('5555555555:',this_row[5])
+			for entry in idx_lst:
+				#print(entry)
+
+				temp.append(this_row[entry])
+		output_list.append(temp)
+
+	return output_list
 
 
 def select(tuples, file_rename, file_map, keyword, cond):
@@ -666,7 +716,6 @@ def merge(tuple1, tuple2, keyword):
 
 def generate_map(file):
     """
-
     :param file:
     :return: file map store a hash from 'rename' to real file name
     file rename store a list of 'rename'
@@ -694,6 +743,7 @@ def query_one_table(attribute, file, conditions, keyword, DISTINCT):
         print(len(tmp[0]))
         keyword_i += 1
     try:
+        #res = projection(tmp,file,attributes)
         res = project(tmp, file_map, file_rename, attribute)
     except:
         print('Tuples rows does not match')
@@ -722,7 +772,7 @@ def query_two_table(attribute, file, conditions, keyword, DISTINCT):
         res = project(tmp, file_map, file_rename, attribute)
     except:
         print('Tuples rows does not match')
-        res = tmp
+        print(tmp)
     return res
 
 
@@ -740,8 +790,20 @@ def query_three_table(attribute, file, conditions, keyword, DISTINCT):
         while keyword_i < len(keyword) and (keyword[keyword_i] == '(' or keyword[keyword_i] == ')'):
             keyword_i += 1
         print(len(tmp[0]), len(tmp[1]), len(tmp[2]))
-    # res = project(tmp, file_map, file_rename, attribute)
-    res = tmp
+    #res = project(tmp, file_map, file_rename, attribute)
+    #print('a:',attribute, 'f:',file, 'c:',conditions, 'k:',keyword)
+
+    attributes = []
+    for att in attribute:
+        file_disk_name = file_map[att[0]]
+        attributes.append([file_disk_name,att[1]])
+    #print(attributes)
+    idx_file = []
+    for f in file:
+        idx_file.append([f[0], np.load(locallst_map[f[0]])])
+    #print(idx_file)
+    res = projection(tmp, idx_file, attributes)
+    #print(tmp)
     return res
 
 
@@ -772,8 +834,10 @@ sample_query = "SELECT R.review_id, R.stars, R.useful FROM review.csv R WHERE R.
 #                "B.city = 'Champaign' AND R.useful > 10 AND P.label = 'inside' AND B.business_id = R.business_id AND B.business_id = P.business_id;"
 # test_query = "SELECT B.name, B.postal_code, R.review_id, R.stars, R.useful FROM business.csv B, review.csv R " \
 #                "WHERE B.city = 'Champaign' AND B.state = 'IL' AND R.stars <> 0 AND B.attributes_DogsAllowed = True AND B.business_id = R.business_id;"
-test_query = "SELECT B.name FROM business.csv B, review.csv R WHERE B.city = 'Champaign' AND B.state = 'IL' AND " \
-             "( R.funny > 50 OR R.useful > 50 ) AND B.business_id = R.business_id;"
-query_output = execute_query(test_query)
+#test_query = "SELECT B.name FROM business.csv B, review.csv R WHERE B.city = 'Champaign' AND B.state = 'IL' AND " \
+#             "( R.funny > 50 OR R.useful > 50 ) AND B.business_id = R.business_id;"
+sample_query = "SELECT B.name FROM business.csv B, review.csv R, photos.csv P WHERE B.city = 'Champaign' AND " \
+               "B.state = 'IL' AND R.stars = 5 AND P.label = 'inside' AND B.business_id = R.business_id AND B.business_id = P.business_id;"
+query_output = execute_query(sample_query)
 end = time.time()
 print(end - start)
