@@ -140,8 +140,8 @@ def decompose_condition(cond):
 def get_index(filename, attr):
     """
     find the index of one attribute
-    :param filename:
-    :param attr:
+    :param filename: example: reviewtag.npy
+    :param attr: example: useful
     :return: integer
     """
     try:
@@ -218,7 +218,9 @@ def select(tuples, file_rename, file_map, keyword, cond):
     :param cond:
     :return:
     """
+    # Join
     if len(cond[0]) == 2 and len(cond[1]) == 2:
+        # Join on two raw tables
         if keyword == '':
             if len(file_rename) == 2:
                 if cond[0][0] == cond[1][0]:
@@ -226,7 +228,9 @@ def select(tuples, file_rename, file_map, keyword, cond):
                 else:
                     return join_two(tuples, file_rename, file_map, keyword, cond)
         elif keyword == 'AND':
+
             if len(file_rename) == 2:
+                # Join after join, or selection by comparing two attribute in one table
                 if len(tuples[0]) == len(tuples[1]) or cond[0][0] == cond[1][0]:
                     return select_two(tuples, file_rename, file_map, keyword, cond)
                 else:
@@ -249,12 +253,13 @@ def select(tuples, file_rename, file_map, keyword, cond):
                         pass
         else:
             pass
+    # Selection on one table
     elif len(cond[0]) == 2 and len(cond[1]) == 1:
         file_index = file_rename.index(cond[0][0])
         filename = file_map[cond[0][0]]
         return update_one(tuples, filename, file_index, cond, keyword)
     else:
-        pass
+        print("Unexpected condition in SELECT")
     print("Unexpected error in select(), some conditions might be missing")
     return tuples
 
@@ -559,40 +564,43 @@ def select_two(tuples, file_rename, file_map, keyword, cond):
     left, right, op = decompose_condition(cond)
     file_idx0 = file_rename.index(cond[0][0])
     file_idx1 = file_rename.index(cond[1][0])
-    attr_idx0 = get_index(file_map[cond[0][0]], left)
-    attr_idx1 = get_index(file_map[cond[1][0]], right)
+    filename1 = file_map[cond[0][0]]
+    filename2 = file_map[cond[1][0]]
     if len(tuples[0]) == 0 and len(tuples[1]) == 0 and keyword == 'AND':
         print("SELECT TWO: both tuples are empty")
         return tuples
-    elif len(tuples[0]) == len(tuples[1]) and file_idx0 != file_idx1:
+    elif cond[0][0] != cond[1][0] and len(tuples[0]) == len(tuples[1]):
         new_tuple = [[], []]
         for i in range(len(tuples[0])):
             if get_truth(tuples[file_idx0][i][attr_idx0], tuples[file_idx1][i][attr_idx1], op):
                 new_tuple[file_idx0].append(tuples[file_idx0][i])
                 new_tuple[file_idx1].append(tuples[file_idx1][i])
         return new_tuple
-    elif cond[0][0] == cond[1][0] and len(tuples[0]) != len(tuples[1]):
-        new_tuple = []
-        if len(tuples[file_idx0]) == 0:
-            filename = file_map[file_rename[file_idx0]]
-            my_file = open(filename, 'r', encoding='utf8')
-            reader = csv.reader(my_file)
-            for row in reader:
-                if get_truth(row[attr_idx0], row[attr_idx1], op):
-                    new_tuple.append(row)
+    elif cond[0][0] == cond[1][0]:
+        index_file1 = idx_path + filename1.replace(".csv", left + "idx.npy")
+        index_file2 = idx_path + filename2.replace(".csv", right + "idx.npy")
+        if exists(index_file1):
+            dict1 = np.load(index_file1).item()
         else:
+            print(index_file1, 'not exists')
+        if exists(index_file2):
+            dict2 = np.load(index_file2).item()
+        else:
+            print(index_file2, 'not exists')
+        if len(tuples[0]) != len(tuples[1]):
+            new_tuple = []
             for row in tuples[file_idx0]:
-                if get_truth(row[attr_idx0], row[attr_idx1], op):
+                if get_truth(dict1[row], dict2[row], op):
                     new_tuple.append(row)
-        tuples[file_idx0] = new_tuple
-        return tuples
-    elif cond[0][0] == cond[1][0] and len(tuples[0]) == len(tuples[1]):
-        new_tuple = [[], []]
-        for i in range(len(tuples[file_idx0])):
-            if get_truth(tuples[file_idx0][i][attr_idx0], tuples[file_idx0][i][attr_idx1], op):
-                new_tuple[file_idx0].append(tuples[file_idx0][i])
-                new_tuple[1-file_idx0].append(tuples[1-file_idx0][i])
-        return new_tuple
+            tuples[file_idx0] = new_tuple
+            return tuples
+        elif  len(tuples[0]) == len(tuples[1]):
+            new_tuple = [[], []]
+            for row in tuples[file_idx0]:
+                if get_truth(dict1[row], dict2[row], op):
+                    new_tuple[file_idx0].append(tuples[file_idx0][i])
+                    new_tuple[1 - file_idx0].append(tuples[1 - file_idx0][i])
+            return new_tuple
     else:
         pass
     print('Error in SELECT_TWO')
@@ -634,6 +642,14 @@ def select_three(tuples, file_rename, file_map, keyword, cond):
 
 
 def merge(tuple1, tuple2, keyword):
+    """
+    One thing needs to be concerned. When tuple2 contains duplicate tuples, merge fails on adding duplicate.
+    Easy way to solve, build a new tuple, store temporary, push new tuple into tuple1
+    :param tuple1:
+    :param tuple2:
+    :param keyword:
+    :return:
+    """
     file_num = len(tuple1)
     if file_num == len(tuple2):
         if keyword == 'OR':
@@ -664,7 +680,7 @@ def generate_map(file):
     return file_map, file_rename
 
 
-def query_one_table(attribute, file, conditions, keyword):
+def query_one_table(attribute, file, conditions, keyword, DISTINCT):
     tmp = [[]]
     file_map, file_rename = generate_map(file)
     keyword_i = -1
@@ -685,7 +701,7 @@ def query_one_table(attribute, file, conditions, keyword):
     return res
 
 
-def query_two_table(attribute, file, conditions, keyword):
+def query_two_table(attribute, file, conditions, keyword, DISTINCT):
     tmp = [[], []]
     file_map, file_rename = generate_map(file)
     keyword_i = -1
@@ -710,7 +726,7 @@ def query_two_table(attribute, file, conditions, keyword):
     return res
 
 
-def query_three_table(attribute, file, conditions, keyword):
+def query_three_table(attribute, file, conditions, keyword, DISTINCT):
     tmp = [[], [], []]
     file_map, file_rename = generate_map(file)
     keyword_i = -1
@@ -730,23 +746,23 @@ def query_three_table(attribute, file, conditions, keyword):
 
 
 def execute_query(input_query):
-    attribute, file, conditions, keyword = parse.sql_preprocess(input_query)
+    attribute, file, conditions, keyword, DISTINCT = parse.sql_preprocess(input_query)
     print('SELECT:', attribute)
     print('FROM:', file)
     print('WHERE conditions:', conditions)
     print('WHERE KEY:', keyword)
     if len(file) == 1:
-        return query_one_table(attribute, file, conditions, keyword)
+        return query_one_table(attribute, file, conditions, keyword, DISTINCT)
     elif len(file) == 2:
-        return query_two_table(attribute, file, conditions, keyword)
+        return query_two_table(attribute, file, conditions, keyword, DISTINCT)
     elif len(file) == 3:
-        return query_three_table(attribute, file, conditions, keyword)
+        return query_three_table(attribute, file, conditions, keyword, DISTINCT)
 
 
 start = time.time()
-# sample_query = "SELECT R.review_id, R.stars, R.useful FROM review.csv R WHERE R.useful > 50 OR ( R.stars = 5 AND R.funny > 20 );"
+sample_query = "SELECT R.review_id, R.stars, R.useful FROM review.csv R WHERE R.useful > 80 AND R.stars = 5 AND R.funny > 30;"
 # sample_query = "SELECT B.name, B.postal_code, R.review_id, R.stars, R.useful FROM business.csv B, review.csv R " \
-#                "WHERE B.city = 'Champaign' AND B.state = 'IL' AND B.business_id = R.business_id;"
+#                "WHERE B.city = 'Champaign' AND B. state = 'IL' AND B.business_id = R.business_id;"
 # sample_query = "SELECT B.name, B.postal_code, R.review_id, R.stars, R.useful FROM business.csv B, review.csv R " \
 #                "WHERE B.city = 'Champaign' AND B.state = 'IL' AND R.stars = 5 AND B.business_id = R.business_id;"
 
@@ -756,8 +772,8 @@ start = time.time()
 #                "B.city = 'Champaign' AND R.useful > 10 AND P.label = 'inside' AND B.business_id = R.business_id AND B.business_id = P.business_id;"
 # test_query = "SELECT B.name, B.postal_code, R.review_id, R.stars, R.useful FROM business.csv B, review.csv R " \
 #                "WHERE B.city = 'Champaign' AND B.state = 'IL' AND R.stars <> 0 AND B.attributes_DogsAllowed = True AND B.business_id = R.business_id;"
-# test_query = "SELECT B.name FROM business.csv B, review.csv R WHERE B.city = 'Champaign' AND B.state = 'IL' AND " \
-#              "( R.funny > 50 OR R.useful > 50 ) AND B.business_id = R.business_id;"
-query_output = execute_query(sample_query)
+test_query = "SELECT B.name FROM business.csv B, review.csv R WHERE B.city = 'Champaign' AND B.state = 'IL' AND " \
+             "( R.funny > 50 OR R.useful > 50 ) AND B.business_id = R.business_id;"
+query_output = execute_query(test_query)
 end = time.time()
 print(end - start)
