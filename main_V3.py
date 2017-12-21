@@ -6,13 +6,23 @@ import numpy as np
 import time
 from btree_search import get_rows
 from os.path import exists
-from rowlocate import getrow
 file_path = 'C:/2017_Fall/CS 411/csv_data/'
 idx_path = file_path + 'index/'
 locallst_map = {'business.csv':idx_path+'businessloc.npy',
                 'review.csv':idx_path+'reviewloc.npy',
                 'photos.csv':idx_path+'photosloc.npy',
                 'checkin.csv':idx_path+'checkinloc.npy'}
+
+
+def getrow(fname, num):
+    # fname is a string. loclist is the list from getloc, num is the row number to locate
+    f = open(fname, "r", encoding='utf8')
+    f.seek(num)
+    reader = csv.reader(f)
+    res = next(reader)
+    f.close()
+    return res
+
 
 def is_number(s):
     try:
@@ -784,22 +794,8 @@ def execute_query(input_query):
 
 
 start = time.time()
-# sample_query = "SELECT R.review_id, R.stars, R.useful FROM review.csv R WHERE R.useful > 80 AND R.stars = 5 AND R.funny > 30;"
-# sample_query = "SELECT B.name, B.postal_code, R.review_id, R.stars, R.useful FROM business.csv B, review.csv R " \
-#                "WHERE B.city = 'Champaign' AND B. state = 'IL' AND B.business_id = R.business_id;"
-# sample_query = "SELECT B.name, B.postal_code, R.review_id, R.stars, R.useful FROM business.csv B, review.csv R " \
-#                "WHERE B.city = 'Champaign' AND B.state = 'IL' AND R.stars = 5 AND B.business_id = R.business_id;"
+sample_query = "SELECT B.name, R1.user_id, R2.user_id FROM business.csv B, review.csv R1, review.csv R2 WHERE B.business_id = R1.business_id AND R1.business_id = R2.business_id AND R1.stars = 5 AND R2.stars = 1 AND R1.useful > 50 AND R2.useful > 50;"
 
-# sample_query = "SELECT B.name FROM business.csv B, review.csv R, photos.csv P WHERE B.city = 'Champaign' AND " \
-#                "B.state = 'IL' AND R.stars = 5 AND P.label = 'inside' AND B.business_id = R.business_id AND B.business_id = P.business_id AND R.stars = 5 AND P.label = 'inside' AND B.business_id = R.business_id AND B.business_id = P.business_id;"
-# sample_query = "SELECT B.name FROM  photos.csv P, review.csv R,  business.csv B   WHERE " \
-#                "B.city = 'Champaign' AND R.useful > 10 AND P.label = 'inside' AND B.business_id = R.business_id AND B.business_id = P.business_id;"
-# test_query = "SELECT B.name, B.postal_code, R.review_id, R.stars, R.useful FROM business.csv B, review.csv R " \
-#                "WHERE B.city = 'Champaign' AND B.state = 'IL' AND R.stars <> 0 AND B.attributes_DogsAllowed = True AND B.business_id = R.business_id;"
-# test_query = "SELECT B.name FROM business.csv B, review.csv R WHERE B.city = 'Champaign' AND B.state = 'IL' AND " \
-#              "( R.funny > 50 OR R.useful > 50 ) AND B.business_id = R.business_id;"
-sample_query = "SELECT B.name, R1.user_id, R2.user_id FROM business.csv B, review.csv R1, review.csv R2 " \
-               "WHERE B.business_id = R1.business_id AND R1.business_id = R2.business_id AND R1.stars = 5 AND R2.stars = 1 AND R1.useful > 50 AND R2.useful > 50;;"
 query_output = execute_query(sample_query)
 end = time.time()
 print(end - start)
