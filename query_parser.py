@@ -123,7 +123,7 @@ def parentheses(keyword, conds):
 
 
 def sql_preprocess(query):
-    if 'DISTINCT' in sample_query:
+    if 'DISTINCT' in query:
         dist = True
         sql = query.replace('DISTINCT', '')
     else:
@@ -187,12 +187,3 @@ def sql_preprocess(query):
     if '(' in keyword and ')' in keyword:
         keyword, conds = parentheses(keyword, conds)
     return attribute, files, conds, keyword, dist
-
-# =============================================================================
-# sample_query = "SELECT R.review_id, R.stars, R.useful FROM review-1m.csv R WHERE R.stars >= 4 AND R.useful > 20;"
-# sample_query = "SELECT B.name, B.postal_code, R.review_id, R.stars, R.useful FROM business.csv B, review-1m.csv R WHERE B.city = 'Champaign' AND B.state = 'IL' AND B.business_id = R.business_id;"
-# sample_query = "SELECT DISTINCT B.name FROM business.csv B, review-1m.csv R, photos.csv P WHERE B.city = 'Champaign' AND B.state = 'IL' AND R.stars = 5 AND P.label = 'inside' AND B.business_id = R.business_id AND B.business_id = P.business_id;"
-#
-# query_output = sql_preprocess(sample_query)
-# print(query_output)
-# =============================================================================
