@@ -216,20 +216,22 @@ def projection(before_pro, file, attributes):
 
 	for i in range(table_num):
 		filename = file[i][0]
-		print('filename:', filename)
 		if filename in attri_dict:
+			print('filename:', filename)
 			attri_lst = attri_dict[filename]
-		fname = idx_path + filename.replace(".csv", "tag.npy")
-		#print(fname)
-		#print(attri_lst)
+			fname = idx_path + filename.replace(".csv", "tag.npy")
+			#print(fname)
+			#print(attri_lst)
+		#print(filename)
+		print('aaa',attri_lst)
 		for entry in attri_lst:
 			#print(entry)
 			attri_idx = get_index(fname, entry)
 			if filename not in file_dict_attri_idx_lst:
-				#print(attri_idx)
 				file_dict_attri_idx_lst[filename] = list()
+			print(file_dict_attri_idx_lst)
 			file_dict_attri_idx_lst[filename].append(attri_idx)
-	#print(file_dict_attri_idx_lst)
+	print(file_dict_attri_idx_lst)
 	#a dict of k = file.csv, v = list of attribute idx
 ####################################################################
 	output_list = list()
@@ -254,7 +256,7 @@ def projection(before_pro, file, attributes):
 
 				temp.append(this_row[entry])
 		output_list.append(temp)
-
+	print(len(output_list))
 	return output_list
 
 
@@ -800,7 +802,7 @@ def query_three_table(attribute, file, conditions, keyword, DISTINCT):
     #print(attributes)
     idx_file = []
     for f in file:
-        idx_file.append([f[0], np.load(locallst_map[f[0]])])
+        idx_file.append([f[0], locallst_map[f[0]]])
     #print(idx_file)
     res = projection(tmp, idx_file, attributes)
     #print(tmp)
@@ -836,7 +838,7 @@ sample_query = "SELECT R.review_id, R.stars, R.useful FROM review.csv R WHERE R.
 #                "WHERE B.city = 'Champaign' AND B.state = 'IL' AND R.stars <> 0 AND B.attributes_DogsAllowed = True AND B.business_id = R.business_id;"
 #test_query = "SELECT B.name FROM business.csv B, review.csv R WHERE B.city = 'Champaign' AND B.state = 'IL' AND " \
 #             "( R.funny > 50 OR R.useful > 50 ) AND B.business_id = R.business_id;"
-sample_query = "SELECT B.name FROM business.csv B, review.csv R, photos.csv P WHERE B.city = 'Champaign' AND " \
+sample_query = "SELECT B.name, R.name FROM business.csv B, review.csv R, photos.csv P WHERE B.city = 'Champaign' AND " \
                "B.state = 'IL' AND R.stars = 5 AND P.label = 'inside' AND B.business_id = R.business_id AND B.business_id = P.business_id;"
 query_output = execute_query(sample_query)
 end = time.time()
