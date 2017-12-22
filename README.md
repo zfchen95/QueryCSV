@@ -6,8 +6,9 @@ General Usage Notes
 ------------------------------------
 - Install an IDE for Python, e.g. Spyder or PyCharm
 - Open 'test_query.py' 
-- Change 'query_list' with input query (We don't have a user interface yet)
-- Be sure you have the CSV files in the same folder
+- Declare file path (We don't have a user interface yet)
+- Declare input query 
+- Build index first (call build_index)
 - Run 'test_query.py'
 
 Query syntax
@@ -45,7 +46,6 @@ Feel free to contact me: zc15@illinois.edu, if you have any issue in running the
 
 Upcoming features
 ------------------------------------
-- Index data in preprocessing
 - Handling query with at least two pairs of parentheses
 - Handling query with arithmatic expression
 - User interface
