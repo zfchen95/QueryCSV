@@ -6,8 +6,9 @@ import numpy as np
 import time
 from btree_search import get_rows
 from os.path import exists
-file_path = 'C:/2017_Fall/CS 411/csv_data/'
-idx_path = file_path + 'index/'
+
+file_path = ''
+idx_path = ''
 
 
 def getrow(fname, num):
@@ -872,7 +873,11 @@ def query_three_table(attribute, file, conditions, keyword, DISTINCT):
     return res
 
 
-def execute_query(input_query):
+def execute_query(input_query, path):
+    global file_path
+    file_path = path
+    global idx_path
+    idx_path = path + 'index/'
     attribute, file, conditions, keyword, DISTINCT = parse.sql_preprocess(input_query)
     # print('SELECT:', attribute)
     # print('FROM:', file)
