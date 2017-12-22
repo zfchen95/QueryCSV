@@ -17,7 +17,7 @@ def build_index(file_path, filename, idx_path, attr_name, idx_type, multiway):
     :param filename: e.g. 'review.csv'
     :param idx_path: e.g. file_path + 'index/'
     :param attr_name: e.g. 'stars'
-    :param idx_type: e.g. 'Hash', 'BTree', 'Location'
+    :param idx_type: e.g. 'Hash', 'BTree', 'Location', 'Tag'
     :param multiway: True or False, True for join attribute, e.g. 'business_id'
     :return:
     """
@@ -67,7 +67,13 @@ def build_index(file_path, filename, idx_path, attr_name, idx_type, multiway):
             new_od = getloc_r_p(file_path + filename)
         idx_name = filename.replace('.csv', 'loc.npy')
         np.save(idx_path + idx_name, new_od)
-
+    elif idx_type == 'Tag':
+        myfile = open(file_path + filename, 'r', encoding='utf8')
+        reader = csv.reader(myfile)
+        tag = next(reader)
+        myfile.close()
+        idx_name = filename.replace('.csv', 'tag.npy')
+        np.save(idx_path + idx_name, tag)
 
 def getloc_b_c(fname):
     f = open(fname, "r", encoding='utf8')
