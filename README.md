@@ -1,4 +1,4 @@
-Query On CSV Version 2.0 11/21/2017
+Query On CSV Version 3.0 12/22/2017
 ------------------------------------
 Target in the scenarios that users want to acquire information from CSV files without putting data into a dataset, we developed this python-based software to ask questions over huge amount of data(300 attributes, millions of rows).
 
