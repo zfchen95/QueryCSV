@@ -5,10 +5,11 @@ Target in the scenarios that users want to acquire information from CSV files wi
 General Usage Notes
 ------------------------------------
 - Install an IDE for Python, e.g. Spyder or PyCharm
+- Make sure you have Python files and CSV files in the same directory
 - Open 'test_query.py' 
 - Modify file_path to current folder path (We don't have a user interface yet)
 - Declare input query 
-- Build index first (call build_index, check instruction in build_index.py)
+- Build index first (By calling _build_index()_, check instructions in build_index.py)
 - Run 'test_query.py'
 
 Query syntax
