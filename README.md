@@ -9,7 +9,7 @@ General Usage Notes
 - Open 'test_query.py' 
 - Modify file_path to current folder path (We don't have a user interface yet)
 - Declare input query 
-- Build index first (By calling _build_index()_, check instructions in build_index.py)
+- Build index first (Call _build_index()_, check instructions in build_index.py)
 - Run 'test_query.py'
 
 Query syntax
