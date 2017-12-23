@@ -1,4 +1,4 @@
-import main_V3 as sql
+import main as sql
 import time
 from build_index import build_index
 
