@@ -6,9 +6,9 @@ General Usage Notes
 ------------------------------------
 - Install an IDE for Python, e.g. Spyder or PyCharm
 - Open 'test_query.py' 
-- Declare file path (We don't have a user interface yet)
+- Modify file_path to current folder path (We don't have a user interface yet)
 - Declare input query 
-- Build index first (call build_index)
+- Build index first (call build_index, check instruction in build_index.py)
 - Run 'test_query.py'
 
 Query syntax
@@ -51,4 +51,4 @@ Upcoming features
 - User interface
 - Querying 4 tables
 ------------------------------------
-Copyright 2017 GSON
+Copyright 2017 GSON - Lu JIN, Xi LI, Yekai YU, Zhenfeng CHEN
