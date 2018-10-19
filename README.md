@@ -52,4 +52,4 @@ Upcoming features
 - User interface
 - Querying 4 tables
 ------------------------------------
-Copyright 2017 GSON - Lu JIN, Xi LI, Yekai YU, Zhenfeng CHEN
+Copyright 2017 GSON - Zhenfeng CHEN, Yekai YU, Lu JIN, Xi LI
